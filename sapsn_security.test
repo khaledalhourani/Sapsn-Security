@@ -4,11 +4,31 @@
  * @file dasdasdasd
  */
 
-class a
-$user = $this->drupalCreateUser();
+class SapsnSecurityUnitTest extends DrupalWebTestCase {
 
-$result = db_select('spasn_keys')
-  ->condition('kid', $user->uid)
-  ->execute();
+  public static function getInfo() {
+    return array(
+      'name' => 'SAPSN security',
+      'description' => 'Test the SAPSN Security module.',
+      'group' => 'Security',
+    );
+  }
 
-$this->assertNotNull($result['sym'], 'Symmetric key generated');
+  function setUp() {
+    parent::setUp('sapsn_security');
+  }
+  
+  function testGenerateKeysUser() {
+    $user = $this->drupalCreateUser();
+    
+    $result = db_select('spasn_keys', 'sk')
+      ->fields('sk')
+      ->condition('kid', $user->uid)
+      ->condition('type', 'user')
+      ->fetchAssoc()
+      ->execute();
+
+    $this->assertNotNull($result['sym'], 'Symmetric key generated');
+  }
+
+}

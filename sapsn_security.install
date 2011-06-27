@@ -18,28 +18,24 @@ function sapsn_security_schema() {
       'kid' => array(
         'type' => 'int',
         'not null' => TRUE,
-        'default' => 0,
         'description' => "entity ids.",
       ),
       'pk' => array(
-        'type' => 'varchar',
-        'length' => 128,
+        'type' => 'text',
         'not null' => TRUE,
-        'default' => '',
+        'size' => 'big',
         'description' => 'User public key.',
       ),
       'pr' => array(
-        'type' => 'varchar',
-        'length' => 128,
+        'type' => 'text',
         'not null' => TRUE,
-        'default' => '',
+        'size' => 'big',
         'description' => 'User private key.',
       ),
       'sym' => array(
-        'type' => 'varchar',
-        'length' => 128,
+        'type' => 'text',
         'not null' => TRUE,
-        'default' => '',
+        'size' => 'big',
         'description' => 'User symmetric key.',
       ),
       'type' => array(
@@ -49,11 +45,6 @@ function sapsn_security_schema() {
         'default' => '',
         'description' => 'to distinguish between user or group.',
       ),
-    ),
-    'unique keys' => array(
-      'pk' => array('pk'),
-      'pr' => array('pr'),
-      'sym' => array('sym'),
     ),
   );
 
