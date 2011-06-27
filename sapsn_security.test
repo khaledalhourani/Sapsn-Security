@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file dasdasdasd
+ */
+
+class 
 $user = $this->drupalCreateUser();
 
 $result = db_select('spasn_keys')
