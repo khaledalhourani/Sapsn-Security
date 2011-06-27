@@ -1,0 +1,7 @@
+$user = $this->drupalCreateUser();
+
+$result = db_select('spasn_keys')
+  ->condition('kid', $user->uid)
+  ->execute();
+
+$this->assertNotNull($result['sym'], 'Symmetric key generated');
