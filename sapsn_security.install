@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the user module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function sapsn_security_schema() {
+  $schema['sapsn_keys'] = array(
+    'description' => 'Store public and private keys.',
+    'fields' => array(
+      'kid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "entity ids.",
+      ),
+      'pk' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'User public key.',
+      ),
+      'pr' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'User private key.',
+      ),
+      'sym' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'User symmetric key.',
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 50,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'to distinguish between user or group.',
+    ),
+    'unique keys' => array(
+      'pk' => array('pk'),
+      'pr' => array('pr'),
+      'sym' => array('sym'),
+    ),
+  );
+
+  return $schema;
+}

@@ -1,0 +1,162 @@
+<?php
+
+/**
+ * @file
+ * Generate and exchange keys, encrypts and decrypts messages and groups.
+ */
+
+/**
+ * Implements hook_user_insert().
+ *
+ * Generate new key pair + symm key for new user.
+ */
+function sapsn_security_user_insert(&$edit, $account, $category) {
+  $symm_key = generate_symkey();
+  $keys = generate_keys();
+  $pk_key = $keys['pk'];
+  $pr_key = $keys['pr'];
+  dpm($pk_key);
+  // insert the generated keys to the sapan keys tabale
+  $query = db_insert('sapsn_keys')
+    ->fields(array(
+      'kid' => $account->uid,
+      'sym' => $symm_key,
+      'pk'  => $pk_key,
+      'pr' => $pr_key,
+      'type' => 'user',
+    ))
+  ->execute();
+}
+
+/**
+ * Implements hook_node_insert().
+ *
+ * Generate
+ */
+function sapsn_security_node_insert($node) {
+  switch ($node->type) {
+    case 'group':
+      $symm = generate_symkey();
+      $query = db_insert('sapsn_keys')
+        ->fields(array(
+          'kid' => $node->nid,
+          'sym' => $symm,
+          'type' => $node->type,
+          ))
+        ->execute();
+    break;
+
+    case 'group_content':
+      // @todo the group could be open/close.
+      $lang = $node->language;
+      $group_nid = $node->group_audience[$lang][0]['gid'];
+
+      $result = db_select('og', 'og')
+        ->fields('og', array('gid', 'etid', 'entity_type'))
+        ->condition('gid', $group_nid)
+        ->execute()
+        ->fetchAssoc();
+
+      $gid = $result['etid'];
+
+      $query = db_select('sapsn_keys', 'sk')
+        ->condition('kid', $gid)
+        ->fields('sk', array('sym'));
+      $result = $query->execute()->fetchAssoc();
+
+      $enc_body = sapsn_security_aes_enc($node->body[$lang][0]['value'], $result['sym']);
+
+      $f_updated = db_update('field_revision_body')
+        ->condition('entity_id ', $node->nid)
+        ->fields(array(
+         'body_value' => (string) $enc_body,
+        ))
+        ->execute();
+
+      break;
+  }
+}
+
+/**
+ * Implements hook_user_relationships_save().
+ *
+ * Act on user request & approve relationships
+ */
+function sapsn_security_user_relationships_save($relationship, $action) {
+  switch ($action) {
+    case 'request':
+      // @todo complete this
+      // Enc
+    break;
+    case 'approve':
+      // @todo complete this
+      // maybe nothing here
+    break;
+  }
+}
+
+/**
+ * Implements hook_user_relationships_load().
+ *
+ * Decrypt relationships requests.
+ */
+function hook_user_relationships_load($relationship_list) {
+}
+
+/**
+ * Generate public and private key pair.
+ */
+function generate_keys() {
+  // Create the keypair
+  $res = openssl_pkey_new();
+
+  // Get private key
+  openssl_pkey_export($res, $privkey);
+
+  // Get public key
+  $pubkey = openssl_pkey_get_details($res);
+
+  return array('pk' => $pubkey['key'], 'pr' => $privkey);
+}
+
+/**
+ * Encrypt plain text with public key, using AES method.
+ */
+function sapsn_security_aes_enc($text, $key) {
+  sapsn_security_load_aes();
+  return AesCtr::encrypt($text, $key);
+}
+
+/**
+ * Decrypt text with private key, using AES method.
+ */
+function sapsn_security_aes_dec($enc_text, $key) {
+  sapsn_security_load_aes();
+  return AesCtr::decrypt($enc_text, $key);
+}
+
+/**
+ * Include AES encrpytion classes
+ */
+function sapsn_security_load_aes() {
+  module_load_include('inc', 'sapsn_security', 'aes.class');
+  module_load_include('inc', 'sapsn_security', 'aesctr.class');
+}
+
+/**
+ * Generate symmetric key with length 128bit default.
+ */
+function generate_symkey($length = 128) {
+  $randstr = "";
+  for($i = 0; $i < $length; $i++) {
+    $randnum = mt_rand(0, 61);
+    if ($randnum < 10) {
+      $randstr .= chr($randnum + 48);
+    } else if ($randnum < 36) {
+      $randstr .= chr($randnum + 55);
+    } else {
+      $randstr .= chr($randnum+61);
+    }
+  }
+  return $randstr;
+}

@@ -1,0 +1,5 @@
+name = SAPSN Security
+description = Implements security concepts in SAPSN project.
+package = SAPSN
+version = 1.0
+core = 7.x
