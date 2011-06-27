@@ -9,6 +9,9 @@
  * Implements hook_schema().
  */
 function sapsn_security_schema() {
+  /**
+   * sapsn_keys.
+   */
   $schema['sapsn_keys'] = array(
     'description' => 'Store public and private keys.',
     'fields' => array(
@@ -50,6 +53,38 @@ function sapsn_security_schema() {
       'pk' => array('pk'),
       'pr' => array('pr'),
       'sym' => array('sym'),
+    ),
+  );
+  /**
+   * sapsn_msg.
+   */
+  $schema['sapsn_msg'] = array(
+    'description' => 'Store encrypted symm key with message id.',
+    'fields' => array(
+      'mid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "private message id, mid.",
+      ),
+      'keym' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+        'description' => 'private message encrypted symmetric key.',
+      ),
+      'dig' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+        'description' => 'hash encrypted symmetric key.',
+      ),
+    ),
+    'foreign keys' => array(
+      'pmsg' => array(
+        'table' => 'pm_message',
+        'columns' => array('mid' => 'mid'),
+      ),
     ),
   );
 

@@ -57,6 +57,7 @@ function sapsn_security_node_insert($node) {
       $result = db_select('og', 'og')
         ->fields('og', array('gid', 'etid', 'entity_type'))
         ->condition('gid', $group_nid)
+        ->condition('type', 'group')
         ->execute()
         ->fetchAssoc();
 
@@ -77,6 +78,126 @@ function sapsn_security_node_insert($node) {
         ->execute();
 
       break;
+  }
+}
+
+/**
+ * Implements hook_privatemsg_message_insert().
+ *
+ * Act on user send privatemsg message
+ */
+function sapsn_security_privatemsg_message_insert($message) {
+  // Get recpients ids
+  $uids = array();
+  foreach ($message->recipients as $recipient) {
+    $uids[] = $recipient->uid;
+  }
+  // Get their pubic keys
+  $query = db_select('sapsn_keys', 'ss')
+    ->condition('uid', $uids, 'IN')
+    ->fields('ss', array('uid', 'pk', 'pr'));
+  $results = $query->execute()->fetchAssoc();
+  // Encrypt the message with symmetric key
+  $symm = generate_symkey();
+  $enc_msg = sapsn_security_aes_enc($message->body, $symm);
+  #dpm($enc_msg);
+  #$dec_msg = sapsn_security_aes_dec($enc_msg, $symm);
+  // Encrypt the message encrypted with asymmetric key
+  #$message->body = $enc_msg;
+  //dpm($results);
+  $pubKey = openssl_pkey_get_public($results['pk']);
+  #$prKey = openssl_pkey_get_private($results['pr']);
+  #dpm($pubKey);
+  #dpm($symm);
+  $enc_symm = "";
+  $enc_symm1 = "";
+  $enc_symm2 = "";
+  #dpm(str_split($symm,64));
+  #dpm(substr($symm,0,64));
+  #dpm(substr($symm,64,128));
+  $s1 = substr($symm,0,64);
+  $s2 = substr($symm,64,128);
+  openssl_public_encrypt((string) $s1, $enc_symm1, $results['pk']);
+  openssl_public_encrypt((string)$s2, $enc_symm2, $results['pk']);
+  $enc_symm = base64_encode($enc_symm1) . base64_encode($enc_symm2);
+  #dpm($enc_symm);
+  //Store encrypted symm key in db
+  $mid = $message->mid;
+  #dpm($mid);
+  $digenc_msg = SHA1($enc_symm); 
+  $midquery = db_insert('sapsn_msg')
+  ->fields(array(
+    'mid' => (int) $mid,
+    'keym' => (string) $enc_symm,
+    'dig' => (string) $digenc_msg,
+  ))
+  ->execute();  
+  $num_updated = db_update('pm_message')
+  ->condition('mid', $mid, '=')
+  ->fields(array(
+    'body' => (string) $enc_msg,
+  ))
+  ->execute(); 
+  #openssl_private_decrypt($enc_symm, $symm1, $results['pr']);
+  #dpm(base64_encode($enc_symm));
+  #dpm($symm1);
+}
+
+/**
+ * Implements hook_privatemsg_message_load().
+ *
+ * Act on user load privatemsg message
+ */
+function sapsn_security_privatemsg_message_load($message) {
+  #dpm($message);
+  #decrypt
+  $uids = array(); // private id
+  foreach($message as $u) {
+  $uids[] = $u->user->uid;
+  #dpm($uids);
+  //get private key
+  $query = db_select('sapsn_keys', 'ss')
+    ->condition('uid', $uids, 'IN')
+    ->condition('type', 'user')
+    ->fields('ss', array('uid', 'pk', 'pr','type'));
+  $results = $query->execute()->fetchAssoc();
+  $prKey = openssl_pkey_get_private($results['pr']);
+  #dpm($results);
+  //get encrypted symm key
+  $query = db_select('sapsn_msg', 'sm')
+    ->condition('mid', $u->mid, '=')
+    ->fields('sm', array('keym','dig'));
+  $results1 = $query->execute()->fetchAssoc();
+  #dpm($results1['keym']);
+  $key = $results1['keym'];
+  $s1 = substr($key,0,strlen($key)/2);
+  $s2 = substr($key,strlen($key)/2,strlen($key));
+  $digincomingencrypted = SHA1($s1 . $s2); 
+  #dpm($s1);
+  #dpm($s2);
+  $ss1 = base64_decode($s1);
+  $ss2 = base64_decode($s2);
+  #dpm($ss1);
+  #dpm($ss2);
+  if ($u->user->uid == $u->author->uid) {
+    return ;
+  }
+  openssl_private_decrypt($ss1, $symm1, $results['pr']);
+  openssl_private_decrypt($ss2, $symm2, $results['pr']);
+  $symm = $symm1 . $symm2;
+  #dpm($symm);
+  $dig = $results1['dig'];
+  #dpm($digincomingencrypted);
+  #dpm($dig);
+  if ( $dig == $digincomingencrypted)
+    {
+      $dec_msg = sapsn_security_aes_dec($u->body, $symm);
+      $u->body = $dec_msg;
+    }
+   else
+    {
+      drupal_set_message($message = NULL, $type = 'warning', $repeat = false);
+    }
   }
 }
 
@@ -127,7 +248,7 @@ function generate_keys() {
  */
 function sapsn_security_aes_enc($text, $key) {
   sapsn_security_load_aes();
-  return AesCtr::encrypt($text, $key);
+  return AesCtr::encrypt($text, $key, 128);
 }
 
 /**
@@ -135,7 +256,7 @@ function sapsn_security_aes_enc($text, $key) {
  */
 function sapsn_security_aes_dec($enc_text, $key) {
   sapsn_security_load_aes();
-  return AesCtr::decrypt($enc_text, $key);
+  return AesCtr::decrypt($enc_text, $key, 128);
 }
 
 /**
