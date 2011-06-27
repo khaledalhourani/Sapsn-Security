@@ -21,12 +21,12 @@ class SapsnSecurityUnitTest extends DrupalWebTestCase {
   function testGenerateKeysUser() {
     $user = $this->drupalCreateUser();
     
-    $result = db_select('spasn_keys', 'sk')
+    $result = db_select('sapsn_keys', 'sk')
       ->fields('sk')
       ->condition('kid', $user->uid)
       ->condition('type', 'user')
-      ->fetchAssoc()
-      ->execute();
+      ->execute()
+      ->fetchAssoc();
 
     $this->assertNotNull($result['sym'], 'Symmetric key generated');
   }
