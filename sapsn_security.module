@@ -3,6 +3,9 @@
 /**
  * @file
  * Generate and exchange keys, encrypts and decrypts messages and groups.
+ *
+ * @todo
+ * Finish all @todos
  */
 
 /**
