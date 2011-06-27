@@ -48,6 +48,7 @@ function sapsn_security_schema() {
         'not null' => TRUE,
         'default' => '',
         'description' => 'to distinguish between user or group.',
+      ),
     ),
     'unique keys' => array(
       'pk' => array('pk'),
@@ -55,6 +56,7 @@ function sapsn_security_schema() {
       'sym' => array('sym'),
     ),
   );
+
   /**
    * sapsn_msg.
    */
